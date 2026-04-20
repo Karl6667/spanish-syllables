@@ -1,12 +1,11 @@
 import streamlit as st
 import pyphen
 
-# 居中布局
+# 1. 基础设置
 st.set_page_config(page_title="西语音节划分器", page_icon="🇪🇸", layout="centered")
-
 dic = pyphen.Pyphen(lang='es')
 
-# CSS 核心修改：强制统一样式
+# 2. 核心 CSS：强制让两个多行文本框长得一模一样
 st.markdown("""
 <style>
     /* 全局背景色 */
@@ -14,7 +13,6 @@ st.markdown("""
         background-color: #F8F9F7;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-
     header {visibility: hidden;}
     footer {visibility: hidden;}
 
@@ -43,66 +41,66 @@ st.markdown("""
         display: block;
     }
 
-    /* ！！！核心修复：将输入框和输出框的标准完全统一 ！！！ */
-    .stTextInput input, .output-box {
-        border-radius: 6px;
-        border: 1px solid #DCE5E2 !important; /* 统一实线边框 */
-        padding: 12px 16px;
-        font-size: 1.15rem;
-        background-color: #FFFFFF !important; /* 统一纯白背景 */
+    /* ！！！终极对齐魔法：针对所有多行文本框 ！！！ */
+    .stTextArea textarea {
+        border-radius: 6px !important;
+        border: 1px solid #DCE5E2 !important;
+        padding: 16px !important;
+        font-size: 1.15rem !important;
+        line-height: 1.6 !important;
+        background-color: #FFFFFF !important; /* 强制纯白底 */
+        color: #4A5552 !important;            /* 强制深色字 */
+        -webkit-text-fill-color: #4A5552 !important; /* 破解苹果/谷歌浏览器的只读字体变浅限制 */
+        opacity: 1 !important;                /* 破解只读状态的半透明限制 */
+        resize: none !important;              /* 禁止手动拖拽右下角改变大小，锁死高度 */
         box-shadow: none !important;
-        height: 52px; /* 强制统一高度，防止内容不同导致框体会忽高忽低 */
-        box-sizing: border-box;
     }
     
-    /* 左侧输入框专属属性 */
-    .stTextInput input {
-        color: #4A5552;
-    }
-    .stTextInput input:focus {
+    /* 左侧输入框点击聚焦时的效果 */
+    .stTextArea textarea:focus {
         border-color: #88A096 !important;
         box-shadow: 0 0 0 1px #88A096 !important;
-    }
-
-    /* 右侧输出框专属属性 */
-    .output-box {
-        color: #354F47;
-        display: flex;
-        align-items: center;
-        font-weight: 500;
-        letter-spacing: 1px;
-    }
-
-    /* 空状态时：框体还是那个白色的框，仅仅把字体颜色变浅，模拟等待输入的占位符感觉 */
-    .output-box.empty {
-        color: #C0CCC8;
-        font-weight: normal;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# 3. 渲染标题区
 st.markdown("""
 <div class="title-box">
     <h1>🍃 西语音节划分器</h1>
-    <p>输入西语单词，感受语言的节奏</p>
+    <p>支持多行批量处理，感受语言的节奏</p>
 </div>
 """, unsafe_allow_html=True)
 
+# 4. 严格的 1:1 双列布局
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<span class="custom-label">输入单词:</span>', unsafe_allow_html=True)
-    word = st.text_input("hidden", label_visibility="collapsed", placeholder="例如: escuchas")
+    st.markdown('<span class="custom-label">输入单词 (支持回车换行):</span>', unsafe_allow_html=True)
+    # 使用 st.text_area 替换 st.text_input，并锁死高度为 300
+    words_input = st.text_area("hidden_input", height=300, label_visibility="collapsed", placeholder="例如:\nHola\nescuchas\nordenador")
 
 with col2:
     st.markdown('<span class="custom-label">音节划分结果:</span>', unsafe_allow_html=True)
     
-    if word:
-        clean_word = word.strip()
-        hyphenated_word = dic.inserted(clean_word, '-')
-        result = hyphenated_word.replace('-', ' - ')
+    # 多行处理逻辑
+    if words_input:
+        # 按照换行符切割输入的每一行
+        lines = words_input.split('\n')
+        result_lines = []
         
-        st.markdown(f'<div class="output-box">{result}</div>', unsafe_allow_html=True)
+        for line in lines:
+            clean_word = line.strip()
+            if clean_word: # 如果这行有字母
+                hyphenated_word = dic.inserted(clean_word, '-')
+                result_lines.append(hyphenated_word.replace('-', ' - '))
+            else:
+                result_lines.append("") # 保留空行，让左右行数完全对齐
+                
+        # 把处理好的多行结果再用换行符拼起来
+        final_result = '\n'.join(result_lines)
     else:
-        # 移除了虚线和透明背景，现在它就是一个规规矩矩的白框
-        st.markdown('<div class="output-box empty">等待输入...</div>', unsafe_allow_html=True)
+        final_result = "等待输入...\n(左侧输入多行，此处对应输出多行)"
+
+    # 右侧同样使用 st.text_area，传入相同的高度，并设置为只读 disabled=True
+    st.text_area("hidden_output", value=final_result, height=300, label_visibility="collapsed", disabled=True)
